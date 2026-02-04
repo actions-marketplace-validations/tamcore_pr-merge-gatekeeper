@@ -61,6 +61,8 @@ Since this action uses `actions/github-script@v8` with inline JavaScript:
 - No trailing whitespace
 - Files must end with a newline
 - Use descriptive variable and function names
+- Remove all trailing whitespace from files before committing. Use `git diff --check` to verify.
+- Use an editor or pre-commit hook that highlights or removes trailing whitespace automatically.
 
 ## CI Requirements
 
