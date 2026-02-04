@@ -119,8 +119,178 @@ runs:
             });
           }
 
-          // TODO: Implement classification logic
-          // TODO: Implement retry loop
+          /**
+           * Classify a check run into a category
+           */
+          function classifyCheckRun(run) {
+            const name = run.name;
+            const appSlug = run.app?.slug || 'unknown';
+            const status = run.status;
+            const conclusion = run.conclusion;
+
+            // Check if this is the current job (self)
+            if (name === currentJob && appSlug === 'github-actions') {
+              return 'self';
+            }
+
+            // Check if this matches any ignored pattern
+            for (const pattern of ignoredPatterns) {
+              if (pattern.test(name)) {
+                return 'ignored';
+              }
+            }
+
+            // Check if still running
+            if (status === 'queued' || status === 'in_progress') {
+              return 'running';
+            }
+
+            // Check if successful (success, skipped, or neutral are all OK)
+            if (conclusion === 'success' || conclusion === 'skipped' || conclusion === 'neutral') {
+              return 'success';
+            }
+
+            // Everything else is a failure
+            return 'failure';
+          }
+
+          /**
+           * Classify a commit status into a category
+           */
+          function classifyStatus(status) {
+            const context = status.context;
+            const state = status.state;
+
+            // Check if this matches any ignored pattern
+            for (const pattern of ignoredPatterns) {
+              if (pattern.test(context)) {
+                return 'ignored';
+              }
+            }
+
+            // Check if still pending
+            if (state === 'pending') {
+              return 'running';
+            }
+
+            // Check if successful
+            if (state === 'success') {
+              return 'success';
+            }
+
+            // Everything else is a failure
+            return 'failure';
+          }
+
+          /**
+           * Perform a single check and return the results
+           */
+          async function performCheck() {
+            const checkRuns = await fetchCheckRuns();
+            const statuses = await fetchCommitStatuses();
+
+            const results = [];
+            let hasFailure = false;
+            let hasRunning = false;
+            let foundSelf = false;
+
+            // Process check runs
+            for (const run of checkRuns) {
+              const category = classifyCheckRun(run);
+              results.push({
+                name: run.name,
+                type: 'check_run',
+                category,
+                status: run.status,
+                conclusion: run.conclusion,
+                url: run.html_url
+              });
+
+              if (category === 'self') foundSelf = true;
+              if (category === 'failure') hasFailure = true;
+              if (category === 'running') hasRunning = true;
+            }
+
+            // Process commit statuses
+            for (const status of statuses) {
+              const category = classifyStatus(status);
+              results.push({
+                name: status.context,
+                type: 'status',
+                category,
+                status: status.state,
+                conclusion: status.state,
+                url: status.target_url
+              });
+
+              if (category === 'failure') hasFailure = true;
+              if (category === 'running') hasRunning = true;
+            }
+
+            if (!foundSelf) {
+              core.warning('Could not find current job in check runs. This may be due to API lag.');
+            }
+
+            return { results, hasFailure, hasRunning, foundSelf };
+          }
+
+          /**
+           * Sleep for a specified number of seconds
+           */
+          function sleep(seconds) {
+            return new Promise(resolve => setTimeout(resolve, seconds * 1000));
+          }
+
+          /**
+           * Main retry loop
+           */
+          async function run() {
+            const runAttempt = parseInt(process.env.GITHUB_RUN_ATTEMPT || '1', 10);
+
+            // If this is a re-run, do an immediate check first
+            if (runAttempt > 1) {
+              core.info('Re-run detected, performing immediate check...');
+              const { results, hasFailure, hasRunning } = await performCheck();
+
+              if (!hasRunning) {
+                return { results, hasFailure };
+              }
+              core.info('Checks still running, will continue with retry loop...');
+            }
+
+            // Initial delay before first check
+            core.info(`Waiting ${initialDelay} seconds before first check...`);
+            await sleep(initialDelay);
+
+            let lastResults = null;
+            let lastHasFailure = false;
+
+            for (let attempt = 0; attempt <= maxRetries; attempt++) {
+              if (attempt > 0) {
+                core.info(`Waiting ${pollingInterval} seconds before retry ${attempt}/${maxRetries}...`);
+                await sleep(pollingInterval);
+              }
+
+              core.info(`Performing check (attempt ${attempt + 1}/${maxRetries + 1})...`);
+              const { results, hasFailure, hasRunning } = await performCheck();
+
+              lastResults = results;
+              lastHasFailure = hasFailure;
+
+              if (!hasRunning) {
+                core.info('All checks have completed.');
+                return { results, hasFailure };
+              }
+
+              const runningCount = results.filter(r => r.category === 'running').length;
+              core.info(`${runningCount} check(s) still running...`);
+            }
+
+            // Max retries exhausted
+            core.warning('Max retries exhausted with checks still running.');
+            return { results: lastResults, hasFailure: true, timedOut: true };
+          }
+
           // TODO: Generate summary
 
           core.info('Merge Gatekeeper initialized');
