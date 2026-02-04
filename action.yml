@@ -251,17 +251,17 @@ runs:
 
             // If this is a re-run, do an immediate check first
             if (runAttempt > 1) {
-              core.info('Re-run detected, performing immediate check...');
+              core.info('🔄 Re-run detected, performing immediate check...');
               const { results, hasFailure, hasRunning } = await performCheck();
 
               if (!hasRunning) {
                 return { results, hasFailure };
               }
-              core.info('Checks still running, will continue with retry loop...');
+              core.info('⏳ Checks still running, will continue with retry loop...');
             }
 
             // Initial delay before first check
-            core.info(`Waiting ${initialDelay} seconds before first check...`);
+            core.info(`⏳ Waiting ${initialDelay} seconds before first check...`);
             await sleep(initialDelay);
 
             let lastResults = null;
@@ -269,14 +269,14 @@ runs:
 
             for (let attempt = 0; attempt <= maxRetries; attempt++) {
               if (attempt > 0) {
-                core.info(`Waiting ${pollingInterval} seconds before retry ${attempt}/${maxRetries}...`);
+                core.info(`⏳ Waiting ${pollingInterval} seconds before retry ${attempt}/${maxRetries}...`);
                 await sleep(pollingInterval);
               }
 
               if (attempt === 0) {
-                core.info('Performing initial check...');
+                core.info('🔍 Performing initial check...');
               } else {
-                core.info(`Performing retry ${attempt}/${maxRetries}...`);
+                core.info(`🔍 Performing retry ${attempt}/${maxRetries}...`);
               }
               const { results, hasFailure, hasRunning } = await performCheck();
 
@@ -284,12 +284,12 @@ runs:
               lastHasFailure = hasFailure;
 
               if (!hasRunning) {
-                core.info('All checks have completed.');
+                core.info('✅ All checks have completed.');
                 return { results, hasFailure };
               }
 
               const runningCount = results.filter(r => r.category === 'running').length;
-              core.info(`${runningCount} check(s) still running...`);
+              core.info(`⏳ ${runningCount} check(s) still running...`);
             }
 
             // Max retries exhausted
