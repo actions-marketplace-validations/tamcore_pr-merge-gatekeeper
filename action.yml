@@ -191,6 +191,9 @@ runs:
             const checkRuns = await fetchCheckRuns();
             const statuses = await fetchCommitStatuses();
 
+            core.info(`Found ${checkRuns.length} check runs`);
+            core.info(`Found ${statuses.length} commit statuses`);
+
             const results = [];
             let hasFailure = false;
             let hasRunning = false;
@@ -208,9 +211,21 @@ runs:
                 url: run.html_url
               });
 
-              if (category === 'self') foundSelf = true;
-              if (category === 'failure') hasFailure = true;
-              if (category === 'running') hasRunning = true;
+              // Log status for each check run
+              if (category === 'self') {
+                core.info(`  🙈 Skipping current running check: ${run.name}`);
+                foundSelf = true;
+              } else if (category === 'ignored') {
+                core.info(`  🙈 Ignoring ${run.name} (matched ignore pattern)`);
+              } else if (category === 'running') {
+                core.info(`  ⏳ ${run.name} is still running (status: ${run.status})`);
+                hasRunning = true;
+              } else if (category === 'failure') {
+                core.info(`  ❌ Check run failed: ${run.name} (conclusion: ${run.conclusion})`);
+                hasFailure = true;
+              } else if (category === 'success') {
+                core.info(`  ✅ ${run.name} passed`);
+              }
             }
 
             // Process commit statuses
@@ -225,8 +240,18 @@ runs:
                 url: status.target_url
               });
 
-              if (category === 'failure') hasFailure = true;
-              if (category === 'running') hasRunning = true;
+              // Log status for each commit status
+              if (category === 'ignored') {
+                core.info(`  🙈 Ignoring ${status.context} (matched ignore pattern)`);
+              } else if (category === 'running') {
+                core.info(`  ⏳ ${status.context} is pending (state: ${status.state})`);
+                hasRunning = true;
+              } else if (category === 'failure') {
+                core.info(`  ❌ Status failed: ${status.context} (state: ${status.state})`);
+                hasFailure = true;
+              } else if (category === 'success') {
+                core.info(`  ✅ ${status.context} passed`);
+              }
             }
 
             if (!foundSelf) {
