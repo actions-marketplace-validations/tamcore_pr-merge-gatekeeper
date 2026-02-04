@@ -81,7 +81,9 @@ runs:
 
               for (const run of runs) {
                 // Skip runs with uninterpreted template syntax
-                if (run.name.includes('${{')) {
+                // Note: We construct the pattern to avoid GitHub parsing it as an expression
+                const templatePattern = '$' + '{{';
+                if (run.name.includes(templatePattern)) {
                   core.debug(`Skipping check run with template syntax: ${run.name}`);
                   continue;
                 }
