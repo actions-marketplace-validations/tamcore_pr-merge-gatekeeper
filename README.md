@@ -1,6 +1,6 @@
-# Merge Gatekeeper
+# PR Merge Gatekeeper
 
-A GitHub Action that ensures all CI checks pass before allowing a PR to be merged. It polls check runs and commit statuses, retrying while checks are in progress.
+A GitHub Action that ensures all CI checks pass before merging PRs. It polls check runs and commit statuses, retrying while checks are in progress.
 
 This action is implemented using [actions/github-script](https://github.com/actions/github-script) for simplicity and maintainability.
 
@@ -58,7 +58,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Merge Gatekeeper
-        uses: tamcore/merge-gatekeeper@v1
+        uses: tamcore/pr-merge-gatekeeper@v1
         with:
           initial-delay-seconds: 10
           max-retries: 10
@@ -101,7 +101,7 @@ jobs:
     if: always() && !cancelled()
     steps:
       - name: Merge Gatekeeper
-        uses: tamcore/merge-gatekeeper@v1
+        uses: tamcore/pr-merge-gatekeeper@v1
         with:
           initial-delay-seconds: 0
           max-retries: 3
@@ -113,7 +113,7 @@ Use **regex patterns** (not glob wildcards) to ignore certain checks:
 
 ```yaml
 - name: Merge Gatekeeper
-  uses: tamcore/merge-gatekeeper@v1
+  uses: tamcore/pr-merge-gatekeeper@v1
   with:
     ignored-name-patterns: |
       ^optional-.*
@@ -141,14 +141,14 @@ jobs:
   gatekeeper:
     runs-on: ubuntu-latest
     steps:
-      - uses: tamcore/merge-gatekeeper@v1
+      - uses: tamcore/pr-merge-gatekeeper@v1
 
   # ❌ Bad - custom name causes mismatch
   gatekeeper:
     name: "My Custom Gatekeeper Name"
     runs-on: ubuntu-latest
     steps:
-      - uses: tamcore/merge-gatekeeper@v1
+      - uses: tamcore/pr-merge-gatekeeper@v1
 ```
 
 ### Race Condition with Late-Starting Jobs

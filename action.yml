@@ -1,6 +1,6 @@
-name: 'Merge Gatekeeper'
-description: 'Ensures all CI checks pass before allowing a PR to be merged. Polls check runs and commit statuses, retrying while checks are in progress.'
-author: 'Philipp'
+name: 'PR Merge Gatekeeper'
+description: 'Ensures all CI checks pass before merging PRs. Polls check runs and statuses, retrying in-progress checks.'
+author: 'tamcore'
 
 branding:
   icon: 'shield'

@@ -74,7 +74,7 @@ The following checks must pass before merging:
 ## Repository Structure
 
 ```
-merge-gatekeeper/
+pr-merge-gatekeeper/
 ├── AGENTS.md           # This file
 ├── README.md           # Usage documentation
 ├── action.yml          # The composite action definition
