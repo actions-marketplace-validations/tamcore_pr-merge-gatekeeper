@@ -101,9 +101,8 @@ runs:
 
               return Array.from(checkRuns.values());
             } catch (error) {
-              // Handle API errors gracefully (e.g., HTML error pages from GitHub)
               core.warning(`GitHub API error while fetching check runs: ${error.message}`);
-              return [];
+              throw error;
             }
           }
 
@@ -127,9 +126,8 @@ runs:
                 return true;
               });
             } catch (error) {
-              // Handle API errors gracefully (e.g., HTML error pages from GitHub)
               core.warning(`GitHub API error while fetching commit statuses: ${error.message}`);
-              return [];
+              throw error;
             }
           }
 
@@ -203,9 +201,9 @@ runs:
             const checkRuns = await fetchCheckRuns();
             const statuses = await fetchCommitStatuses();
 
-            // If both API calls failed, throw an error to trigger retry
+            // If both APIs returned empty results, treat as a retriable error
             if (checkRuns.length === 0 && statuses.length === 0) {
-              core.warning('⚠️ GitHub API returned no data (possible temporary API issue). Will retry...');
+              throw new Error('No check runs or commit statuses found (possible API issue or checks not yet registered)');
             }
 
             core.info(`Found ${checkRuns.length} check runs`);
